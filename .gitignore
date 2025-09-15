@@ -7,7 +7,7 @@ __pycache__/
 *.log
 db.sqlite3
 /venv/
-/polls/
+/polls_venv/
 *.pot
 *.py[cod]
 .DS_Store
