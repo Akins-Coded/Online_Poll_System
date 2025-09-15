@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.cache import cache
 from django.db import models
 from datetime import datetime, timedelta
 
@@ -13,6 +14,9 @@ class Poll(models.Model):
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="polls")
     created_at = models.DateTimeField(default=default_created_at)
     expires_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ["-created_at"] 
 
     def save(self, *args, **kwargs):
         if not self.expires_at:
@@ -38,9 +42,9 @@ class Option(models.Model):
 
 class Vote(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="votes")
-    poll = models.ForeignKey(Poll, on_delete=models.CASCADE, related_name="votes")
-    option = models.ForeignKey(Option, on_delete=models.CASCADE, related_name="votes")
-    timestamp = models.DateTimeField(default=default_created_at)
+    poll = models.ForeignKey("Poll", on_delete=models.CASCADE, related_name="votes")
+    option = models.ForeignKey("Option", on_delete=models.CASCADE, related_name="votes")
+    timestamp = models.DateTimeField(default=datetime.utcnow)
 
     class Meta:
         constraints = [
@@ -49,3 +53,34 @@ class Vote(models.Model):
 
     def __str__(self):
         return f"{self.user.email} -> {self.option.text}"
+
+    @staticmethod
+    def get_user_vote(user_id, poll_id):
+        cache_key = f"user_vote:{user_id}:{poll_id}"
+        vote_id = cache.get(cache_key)
+        if vote_id is not None:
+            return Vote.objects.filter(id=vote_id).first()
+
+        vote = Vote.objects.filter(user_id=user_id, poll_id=poll_id).first()
+        if vote:
+            cache.set(cache_key, vote.id, timeout=60 * 5)
+        return vote
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+        # update user_vote cache
+        cache.set(f"user_vote:{self.user_id}:{self.poll_id}", self.id, timeout=60 * 5)
+
+        # invalidate poll results cache
+        cache.delete(f"poll_results:{self.poll_id}")
+
+    def delete(self, *args, **kwargs):
+        # invalidate user_vote cache
+        cache.delete(f"user_vote:{self.user_id}:{self.poll_id}")
+
+        # invalidate poll results cache
+        cache.delete(f"poll_results:{self.poll_id}")
+
+        super().delete(*args, **kwargs)
+        
