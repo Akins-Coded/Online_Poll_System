@@ -43,8 +43,8 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
 
     # Apps
-
     'api.apps.ApiConfig',
+    "polls.apps.PollsConfig",
     
 ]
 
