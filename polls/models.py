@@ -44,7 +44,7 @@ class Vote(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="votes")
     poll = models.ForeignKey("Poll", on_delete=models.CASCADE, related_name="votes")
     option = models.ForeignKey("Option", on_delete=models.CASCADE, related_name="votes")
-    timestamp = models.DateTimeField(default=datetime.utcnow)
+    timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         constraints = [

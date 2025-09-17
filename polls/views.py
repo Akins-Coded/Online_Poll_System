@@ -28,6 +28,18 @@ class PollViewSet(viewsets.ModelViewSet):
     serializer_class = PollSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
 
+    def get_queryset(self):
+        """
+        Return polls that are still active (not expired).
+        Admins may see all polls.
+        """
+        now = timezone.now()
+        qs = Poll.objects.all().select_related("created_by").prefetch_related("options").order_by("-created_at")
+        if self.request.user.is_authenticated:
+            # Return only active polls for regular users
+            qs = qs.filter(expires_at__gt=now)
+        return qs
+
     # -----------------------------
     # Cache key helpers
     # -----------------------------

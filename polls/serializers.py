@@ -33,7 +33,7 @@ class CreatePollSerializer(serializers.ModelSerializer):
 class AddOptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Option
-        fields = ["id", "text"]
+        fields = ["text"]
 
 
 class VoteSerializer(serializers.ModelSerializer):
