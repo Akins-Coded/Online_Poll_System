@@ -8,6 +8,8 @@ class UserManager(BaseUserManager):
             raise ValueError("Users must provide an email address")
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
+        if not password:
+            raise ValueError("Password is required")
         user.set_password(password)
         user.save(using=self._db)
         return user
@@ -35,12 +37,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     surname = models.CharField(max_length=150, blank=True, null=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
-    role = models.CharField(
-        max_length=20, choices=Roles.choices, default=Roles.VOTER
-    )
+    role = models.CharField(max_length=20, choices=Roles.choices, default=Roles.VOTER)
 
-    is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False)
     objects = UserManager()
 
     USERNAME_FIELD = "email"
@@ -48,3 +46,8 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+    @property
+    def last_name(self):
+        """Compatibility alias so Django admin works with `surname`."""
+        return self.surname

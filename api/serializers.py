@@ -5,18 +5,16 @@ User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
+    """Serializer for basic user details."""
+
     class Meta:
         model = User
         fields = ["id", "email", "first_name", "surname", "role"]
 
 
-class RegisterSerializer(serializers.ModelSerializer):
-    confirm_password = serializers.CharField(
-        write_only=True, required=True, error_messages={"required": "Confirm password is required."}
-    )
-    confirm_email = serializers.EmailField(
-        write_only=True, required=True, error_messages={"required": "Confirm email is required."}
-    )
+class AdminCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating admins only."""
+
     password = serializers.CharField(
         write_only=True,
         min_length=8,
@@ -25,9 +23,29 @@ class RegisterSerializer(serializers.ModelSerializer):
             "min_length": "Password must be at least 8 characters long.",
         },
     )
-    role = serializers.ChoiceField(
-        choices=User.Roles.choices,
-        required=False  # 🔹 role is optional; only admins can set it
+
+    class Meta:
+        model = User
+        fields = ["email", "password", "first_name", "surname"]
+
+    def create(self, validated_data):
+        validated_data["role"] = User.Roles.ADMIN  # force admin role
+        user = User.objects.create_user(**validated_data)
+        return user
+
+
+class RegisterSerializer(serializers.ModelSerializer):
+    """Serializer for user self-registration (non-admins always become voters)."""
+
+    confirm_password = serializers.CharField(write_only=True, required=True)
+    confirm_email = serializers.EmailField(write_only=True, required=True)
+    password = serializers.CharField(
+        write_only=True,
+        min_length=8,
+        error_messages={
+            "required": "Password is required.",
+            "min_length": "Password must be at least 8 characters long.",
+        },
     )
 
     class Meta:
@@ -40,7 +58,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             "confirm_email",
             "password",
             "confirm_password",
-            "role",
+           
         ]
         extra_kwargs = {
             "first_name": {"required": True},
@@ -49,31 +67,22 @@ class RegisterSerializer(serializers.ModelSerializer):
         }
 
     def validate(self, attrs):
-        password = attrs.get("password")
-        confirm_password = attrs.get("confirm_password")
-        email = attrs.get("email")
-        confirm_email = attrs.get("confirm_email")
-
-        if password != confirm_password:
+        if attrs.get("password") != attrs.get("confirm_password"):
             raise serializers.ValidationError({"password": "Passwords do not match."})
 
-        if email != confirm_email:
+        if attrs.get("email") != attrs.get("confirm_email"):
             raise serializers.ValidationError({"email": "Emails do not match."})
 
         return attrs
 
     def create(self, validated_data):
-        # remove confirm fields
         validated_data.pop("confirm_password")
         validated_data.pop("confirm_email")
-
         password = validated_data.pop("password")
 
-        # 🔹 Enforce role logic
         request = self.context.get("request")
         if not request or not request.user.is_authenticated or request.user.role != User.Roles.ADMIN:
-            # Non-admins can only create voter accounts
-            validated_data["role"] = User.Roles.VOTER
+            validated_data["role"] = User.Roles.VOTER  # enforce voter role
 
         user = User.objects.create_user(**validated_data)
         user.set_password(password)
