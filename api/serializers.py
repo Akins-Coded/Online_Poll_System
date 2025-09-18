@@ -29,7 +29,11 @@ class AdminCreateSerializer(serializers.ModelSerializer):
         fields = ["email", "password", "first_name", "surname"]
 
     def create(self, validated_data):
-        validated_data["role"] = User.Roles.ADMIN  # force admin role
+
+        validated_data["role"] = User.Roles.ADMIN
+        validated_data["is_staff"] = True
+        validated_data["is_superuser"] = True
+
         user = User.objects.create_user(**validated_data)
         return user
 
@@ -76,15 +80,13 @@ class RegisterSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        validated_data.pop("confirm_password")
-        validated_data.pop("confirm_email")
+        validated_data.pop("confirm_password", None)
+        validated_data.pop("confirm_email", None)
         password = validated_data.pop("password")
 
         request = self.context.get("request")
         if not request or not request.user.is_authenticated or request.user.role != User.Roles.ADMIN:
             validated_data["role"] = User.Roles.VOTER  # enforce voter role
 
-        user = User.objects.create_user(**validated_data)
-        user.set_password(password)
-        user.save()
+        user = User.objects.create_user(password=password, **validated_data)
         return user
