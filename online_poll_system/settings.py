@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
      'pytest_django',
+     'drf_yasg',
 
     # Apps
     'api.apps.ApiConfig',

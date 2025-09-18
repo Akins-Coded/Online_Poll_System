@@ -3,6 +3,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 from django.contrib.auth import get_user_model
 from .serializers import RegisterSerializer, AdminCreateSerializer, UserSerializer
 from .permissions import IsAdminUser
@@ -11,8 +13,7 @@ User = get_user_model()
 
 
 class RegisterView(generics.CreateAPIView):
-    """Open registration, Non-admins can only Register Voters. Coded-Something"""
-
+    """Open registration; non-admins can only register voters."""
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
@@ -22,17 +23,42 @@ class RegisterView(generics.CreateAPIView):
 
 
 class LoginView(TokenObtainPairView):
+    """JWT login view with documented request/response in Swagger."""
     serializer_class = TokenObtainPairSerializer
     permission_classes = [permissions.AllowAny]
 
+    @swagger_auto_schema(
+        operation_description="Obtain JWT token pair",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['email', 'password'],
+            properties={
+                'email': openapi.Schema(type=openapi.TYPE_STRING),
+                'password': openapi.Schema(type=openapi.TYPE_STRING),
+            },
+        ),
+        responses={200: openapi.Response(
+            description='JWT Token Pair',
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'refresh': openapi.Schema(type=openapi.TYPE_STRING),
+                    'access': openapi.Schema(type=openapi.TYPE_STRING),
+                }
+            )
+        )}
+    )
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
 
 class RefreshView(TokenRefreshView):
+    """JWT token refresh view."""
     permission_classes = [permissions.AllowAny]
 
 
 class UserListView(generics.ListAPIView):
     """List all users — only admins can access this."""
-
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated, IsAdminUser]
@@ -40,13 +66,16 @@ class UserListView(generics.ListAPIView):
 
 class UserViewSet(viewsets.GenericViewSet):
     """Viewset for admin-only operations (like creating new admins)."""
-
     queryset = User.objects.all()
     serializer_class = AdminCreateSerializer
 
+    @swagger_auto_schema(
+        operation_description="Create a new admin (admin-only)",
+        request_body=AdminCreateSerializer,
+        responses={201: AdminCreateSerializer}
+    )
     @action(detail=False, methods=["post"], permission_classes=[permissions.IsAuthenticated, IsAdminUser])
     def create_admin(self, request):
-        """Allow only admins to create another admin."""
         serializer = AdminCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
