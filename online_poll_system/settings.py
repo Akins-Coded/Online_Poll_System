@@ -33,7 +33,7 @@ if not SECRET_KEY:
         raise ImproperlyConfigured("SECRET_KEY must be set in production.")
         
 
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["CodedMan.pythonanywhere.com", "www.CodedMan.pythonanywhere.com"])
+ALLOWED_HOSTS = ['codedman.pythonanywhere.com', 'www.codedman.pythonanywhere.com', '127.0.0.1', 'localhost']
 
 # --------------------------
 # DATABASE
