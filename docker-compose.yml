@@ -3,7 +3,7 @@ services:
     build: .
     command: python manage.py runserver 0.0.0.0:8000  # Replace with gunicorn in prod
     env_file:
-      - .env.prod  # Optional; fallback environment variables exist in Dockerfile
+      - .env.prod
     ports:
       - "8000:8000"
     depends_on:
