@@ -8,7 +8,6 @@ from pathlib import Path
 import environ
 from django.core.exceptions import ImproperlyConfigured
 from django.db import connections
-from django.db.utils import OperationalError
 
 logger = logging.getLogger(__name__)
 # BASE DIRECTORY
@@ -36,33 +35,46 @@ if not SECRET_KEY:
         raise ImproperlyConfigured("SECRET_KEY must be set in production.")
         
 
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["CodedMan.pythonanywhere.com", "www.CodedMan.pythonanywhere.com"])
+
 # --------------------------
 # DATABASE
 # --------------------------
-# Try to load database from environment (e.g., Postgres for production)
-# --------------------------
-# DATABASE
-# --------------------------
+
 USE_LOCAL_SQLITE = env.bool("USE_LOCAL_SQLITE", default=False)
 
 if USE_LOCAL_SQLITE:
     DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
 else:
     try:
-        DATABASES = {"default": env.db()}
-    except Exception as e:
-        import logging
-        logging.warning(f"Failed to load DATABASE_URL ({e}), falling back to SQLite.")
         DATABASES = {
-            "default": {
-                "ENGINE": "django.db.backends.sqlite3",
-                "NAME": BASE_DIR / "db.sqlite3",
+            'default': {
+                'ENGINE': env('DB_ENGINE'),
+                'NAME': env('DB_NAME'),
+                'USER': env('DB_USER'),
+                'PASSWORD': env('DB_PASSWORD'),
+                'HOST': env('DB_HOST'),
+            }
+        }
+
+        # Optional: test the DB connection immediately
+        from django.db import connections
+        connections['default'].ensure_connection()
+
+    except Exception as e:
+        logging.warning(
+            f"[Database Warning] Failed to connect to MySQL/Postgres: {e}. "
+            "Falling back to local SQLite database."
+        )
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
             }
         }
 # --------------------------
