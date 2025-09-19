@@ -25,7 +25,7 @@ ENV PYTHONUNBUFFERED=1
 # Set default environment variables
 # --------------------------
 ENV DEBUG=False
-ENV SECRET_KEY=fallback-secret-for-dev-only
+ENV SECRET_KEY=fallback-secret-for-ci
 ENV DATABASE_URL=sqlite:///:memory:
 
 # --------------------------

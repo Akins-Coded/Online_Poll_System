@@ -30,7 +30,6 @@ if os.path.exists(env_file):
 DEBUG = env("DEBUG", default=False)
 
 # SECRET_KEY fallback: .env → env vars → random secret (for CI/Docker)
-
 SECRET_KEY = os.environ.get("SECRET_KEY") or env.str("SECRET_KEY", default=secrets.token_urlsafe(50))
 
 
