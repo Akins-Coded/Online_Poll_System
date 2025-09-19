@@ -4,4 +4,4 @@ try:
     __all__ = ("celery_app",)
 
 except ImportError:
-    celery_app = None 
+    celery_app = None
