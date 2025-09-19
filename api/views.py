@@ -5,11 +5,12 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from .tasks import send_welcome_email
 from django.contrib.auth import get_user_model
 from .serializers import RegisterSerializer, AdminCreateSerializer, UserSerializer
 from .permissions import IsAdminUser
 
-User = get_user_model()
+Uuserser = get_user_model()
 
 
 class RegisterView(generics.CreateAPIView):
@@ -21,6 +22,23 @@ class RegisterView(generics.CreateAPIView):
     def get_serializer_context(self):
         return {"request": self.request}
 
+    @swagger_auto_schema(
+        operation_description="Register a new user (voter by default). Sends a welcome email asynchronously.",
+        request_body=RegisterSerializer,
+        responses={
+            201: openapi.Response(
+                description="User created successfully",
+                schema=RegisterSerializer
+            )
+        }
+    )
+    def perform_create(self, serializer):
+        user = serializer.save()
+        # Schedule sending welcome email asynchronously
+        send_welcome_email.apply_async(
+            args=[user.email, user.first_name],
+            countdown=60  # delay in seconds; can be 0 for immediate
+        )
 
 class LoginView(TokenObtainPairView):
     """JWT login view with documented request/response in Swagger."""
