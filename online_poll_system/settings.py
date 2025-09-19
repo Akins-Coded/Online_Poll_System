@@ -3,11 +3,14 @@ Django settings for online_poll_system project (Production Ready)
 """
 
 import os
-import secrets
-import environ
+import logging
 from pathlib import Path
+import environ
+from django.core.exceptions import ImproperlyConfigured
+from django.db import connections
+from django.db.utils import OperationalError
 
-# --------------------------
+logger = logging.getLogger(__name__)
 # BASE DIRECTORY
 # --------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -15,42 +18,53 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # --------------------------
 # ENVIRONMENT VARIABLES
 # --------------------------
-env = environ.Env(
-    DEBUG=(bool, False),
-)
+env = environ.Env(DEBUG=(bool, False))
+environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
-# Load .env file if it exists
-env_file = os.path.join(BASE_DIR, ".env")
-if os.path.exists(env_file):
-    environ.Env.read_env(env_file)
 
-# --------------------------
-# SECURITY SETTINGS
-# --------------------------
-DEBUG = env("DEBUG", default=False)
+# ------------------------------------------------------------------------------
+# SECURITY
+# ------------------------------------------------------------------------------
+DEBUG = env.bool("DEBUG", default=False)
 
-# SECRET_KEY fallback: .env → env vars → random secret (for CI/Docker)
-SECRET_KEY = os.environ.get("SECRET_KEY") or env.str("SECRET_KEY", default=secrets.token_urlsafe(50))
-
+SECRET_KEY = env("SECRET_KEY", default=None)
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = "django-insecure-unsafe-fallback-key"
+        logger.warning("Using fallback SECRET_KEY in DEBUG mode.")
+    else:
+        raise ImproperlyConfigured("SECRET_KEY must be set in production.")
+        
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
-
 # --------------------------
 # DATABASE
 # --------------------------
-try:
-    DATABASES = {
-        "default": env.db(default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
-    }
-except Exception:
-    # Fallback to SQLite if DATABASE_URL missing/invalid
+# Try to load database from environment (e.g., Postgres for production)
+# --------------------------
+# DATABASE
+# --------------------------
+USE_LOCAL_SQLITE = env.bool("USE_LOCAL_SQLITE", default=False)
+
+if USE_LOCAL_SQLITE:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
         }
     }
-
+else:
+    try:
+        DATABASES = {"default": env.db()}
+    except Exception as e:
+        import logging
+        logging.warning(f"Failed to load DATABASE_URL ({e}), falling back to SQLite.")
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.sqlite3",
+                "NAME": BASE_DIR / "db.sqlite3",
+            }
+        }
 # --------------------------
 # APPLICATION DEFINITION
 # --------------------------
@@ -125,15 +139,15 @@ USE_TZ = True
 # --------------------------
 # STATIC FILES
 # --------------------------
-STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-
 # --------------------------
 # MEDIA FILES (Optional)
 # --------------------------
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "mediafiles"
+MEDIA_ROOT = os.path.join(BASE_DIR, "mediafiles")
 
 # --------------------------
 # REST FRAMEWORK
@@ -181,13 +195,5 @@ EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 
-# --------------------------
-# CELERY CONFIGURATION (optional)
-# --------------------------
-CELERY_ENABLED = env.bool("CELERY_ENABLED", default=False)
-if CELERY_ENABLED:
-    CELERY_BROKER_URL = env("CELERY_BROKER_URL")
-    CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND")
-    CELERY_ACCEPT_CONTENT = ["json"]
-    CELERY_TASK_SERIALIZER = "json"
-    CELERY_RESULT_SERIALIZER = "json"
+
+

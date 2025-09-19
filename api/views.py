@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from .serializers import RegisterSerializer, AdminCreateSerializer, UserSerializer
 from .permissions import IsAdminUser
 
-Uuserser = get_user_model()
+User = get_user_model()
 
 
 class RegisterView(generics.CreateAPIView):
@@ -34,11 +34,9 @@ class RegisterView(generics.CreateAPIView):
     )
     def perform_create(self, serializer):
         user = serializer.save()
-        # Schedule sending welcome email asynchronously
-        send_welcome_email.apply_async(
-            args=[user.email, user.first_name],
-            countdown=60  # delay in seconds; can be 0 for immediate
-        )
+        # Send welcome email in a background thread
+        send_welcome_email(user.email, user.first_name)
+
 
 class LoginView(TokenObtainPairView):
     """JWT login view with documented request/response in Swagger."""

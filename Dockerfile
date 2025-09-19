@@ -1,32 +1,13 @@
 # --------------------------
 # Base image
 # --------------------------
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # --------------------------
 # Set working directory
 # --------------------------
 WORKDIR /app
 
-# --------------------------
-# Install system dependencies
-# --------------------------
-RUN apt-get update && apt-get install -y \
-    build-essential libpq-dev && \
-    rm -rf /var/lib/apt/lists/*
-
-# --------------------------
-# Prevent .pyc creation & unbuffered logs
-# --------------------------
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-
-# Set default environment variables
-# --------------------------
-ENV DEBUG=False
-ENV SECRET_KEY=fallback-secret-for-ci
-ENV DATABASE_URL=sqlite:///:memory:
 
 # --------------------------
 # Copy & install Python dependencies

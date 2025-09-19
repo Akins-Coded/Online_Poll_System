@@ -1,18 +1,10 @@
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils.html import strip_tags
-
-try:
-    from celery import shared_task
-    CELERY_AVAILABLE = settings.CELERY_ENABLED
-except ImportError:
-    CELERY_AVAILABLE = False
-
+import threading
 
 def _send_welcome_email(user_email, first_name):
-    """
-    Internal helper to send the welcome email (HTML + plain text fallback)
-    """
+    """Internal helper to send the welcome email (HTML + plain text fallback)"""
     subject = "🎉 Welcome to CODED Online Poll System!"
     
     html_message = f"""
@@ -45,12 +37,11 @@ def _send_welcome_email(user_email, first_name):
     return f"Sent welcome email to {user_email}"
 
 
-# Celery task if available
-if CELERY_AVAILABLE:
-    @shared_task
-    def send_welcome_email(user_email, first_name):
-        return _send_welcome_email(user_email, first_name)
-else:
-    # Fallback: synchronous call
-    def send_welcome_email(user_email, first_name):
-        return _send_welcome_email(user_email, first_name)
+def send_welcome_email(user_email, first_name):
+    """Send welcome email in a background thread to avoid blocking request."""
+    thread = threading.Thread(
+        target=_send_welcome_email,
+        args=(user_email, first_name)
+    )
+    thread.start()
+    return f"Queued welcome email to {user_email}"
