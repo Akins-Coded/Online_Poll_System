@@ -16,7 +16,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # --------------------------
 env = environ.Env(
     DEBUG=(bool, False),
-    SECRET_KEY=(str, "fallback-secret-for-dev-only"),
 )
 
 # Load .env file if it exists
@@ -28,7 +27,7 @@ if os.path.exists(env_file):
 # SECURITY SETTINGS
 # --------------------------
 DEBUG = env("DEBUG", default=False)
-SECRET_KEY = env("SECRET_KEY")
+SECRET_KEY = env("SECRET_KEY", default=secrets.token_urlsafe(50))
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 
 # --------------------------
@@ -180,7 +179,7 @@ EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 # --------------------------
 # CELERY CONFIGURATION (optional)
 # --------------------------
-CELERY_ENABLED = env.bool("CELERY_ENABLED", default=True)
+CELERY_ENABLED = env.bool("CELERY_ENABLED", default=False)
 if CELERY_ENABLED:
     CELERY_BROKER_URL = env("CELERY_BROKER_URL")
     CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND")
