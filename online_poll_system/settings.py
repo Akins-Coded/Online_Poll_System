@@ -6,8 +6,6 @@ import logging
 from pathlib import Path
 import environ
 from django.core.exceptions import ImproperlyConfigured
-from django.db import connections
-from django.db.utils import OperationalError
 
 logger = logging.getLogger(__name__)
 # BASE DIRECTORY
@@ -52,23 +50,7 @@ DATABASES = {
     }
 }
 
-# Try connecting to MySQL — if it fails in DEBUG, fallback to SQLite
-if DEBUG:
-    try:
-        conn = connections['default']
-        conn.cursor()  # force connection check
-        logger.info(f"✅ Connected to MySQL database: {DATABASES['default']['NAME']}")
-    except OperationalError as e:
-        logger.warning(
-            f"⚠️ MySQL connection failed: {e}. "
-            f"Falling back to SQLite (DEBUG mode only)."
-        )
-        DATABASES = {
-            "default": {
-                "ENGINE": "django.db.backends.sqlite3",
-                "NAME": BASE_DIR / "db.sqlite3",
-            }
-        }
+
 # --------------------------
 # APPLICATION DEFINITION
 # --------------------------
