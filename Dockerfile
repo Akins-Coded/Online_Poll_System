@@ -33,8 +33,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # --------------------------
-# Set default environment variables to avoid missing .env errors
-# These can be overridden by real .env files or Docker Compose env_file
+# Default environment variables to prevent missing .env issues
+# Can be overridden by real .env or docker-compose env_file
 # --------------------------
 ENV DEBUG=False
 ENV SECRET_KEY=fallback-secret-for-dev-only
@@ -43,10 +43,16 @@ ENV DATABASE_URL=sqlite:///:memory:
 # --------------------------
 # Collect static files safely
 # --------------------------
-# Ignore errors in case .env or DB is not available
-RUN python -c "import os; os.environ.setdefault('SECRET_KEY', 'fallback-secret-for-dev-only'); os.environ.setdefault('DEBUG', 'False'); \
-try: from django.core.management import execute_from_command_line; execute_from_command_line(['manage.py', 'collectstatic', '--noinput']); \
-except Exception as e: print('Warning: collectstatic skipped', e)"
+RUN python -c "\
+import os; \
+os.environ.setdefault('SECRET_KEY', 'fallback-secret-for-dev-only'); \
+os.environ.setdefault('DEBUG', 'False'); \
+try: \
+    from django.core.management import execute_from_command_line; \
+    execute_from_command_line(['manage.py', 'collectstatic', '--noinput']); \
+except Exception as e: \
+    print('Warning: collectstatic skipped', e)\
+"
 
 # --------------------------
 # Expose port
@@ -54,6 +60,6 @@ except Exception as e: print('Warning: collectstatic skipped', e)"
 EXPOSE 8000
 
 # --------------------------
-# Command (still Django dev server, replace with gunicorn in prod)
+# Run Django dev server (replace with gunicorn in prod)
 # --------------------------
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

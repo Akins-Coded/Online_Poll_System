@@ -4,9 +4,8 @@ Django settings for online_poll_system project (Production Ready)
 
 import os
 from pathlib import Path
-import environ
 import secrets
-
+import environ
 
 # --------------------------
 # BASE DIRECTORY
@@ -21,15 +20,21 @@ env = environ.Env(
 )
 
 # Load .env file if it exists
-env_file = os.path.join(BASE_DIR, ".env")
-if os.path.exists(env_file):
-    environ.Env.read_env(env_file)
+env_file = BASE_DIR / ".env"
+if env_file.exists():
+    environ.Env.read_env(str(env_file))
 
 # --------------------------
 # SECURITY SETTINGS
 # --------------------------
 DEBUG = env("DEBUG", default=False)
-SECRET_KEY = env("SECRET_KEY", default=secrets.token_urlsafe(50))
+
+# SECRET_KEY fallback: .env → env vars → random secret (for CI/Docker)
+SECRET_KEY = env(
+    "SECRET_KEY",
+    default=os.getenv("SECRET_KEY") or secrets.token_urlsafe(50)
+)
+
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 
 # --------------------------
@@ -37,10 +42,10 @@ ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 # --------------------------
 try:
     DATABASES = {
-        "default": env.db()
+        "default": env.db(default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
     }
 except Exception:
-    # Fallback to SQLite if DATABASE_URL is missing or invalid
+    # Fallback to SQLite if DATABASE_URL missing/invalid
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -53,12 +58,12 @@ except Exception:
 # --------------------------
 INSTALLED_APPS = [
     # Django default apps
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
 
     # Third-party apps
     "rest_framework",
@@ -67,55 +72,55 @@ INSTALLED_APPS = [
     "pytest_django",
 
     # Local apps
-    'api.apps.ApiConfig',
+    "api.apps.ApiConfig",
     "polls.apps.PollsConfig",
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
+    "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",  # Static files in prod
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'online_poll_system.urls'
+ROOT_URLCONF = "online_poll_system.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'online_poll_system.wsgi.application'
+WSGI_APPLICATION = "online_poll_system.wsgi.application"
 
 # --------------------------
 # PASSWORD VALIDATION
 # --------------------------
 AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
 # --------------------------
 # INTERNATIONALIZATION
 # --------------------------
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+LANGUAGE_CODE = "en-us"
+TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
@@ -123,14 +128,14 @@ USE_TZ = True
 # STATIC FILES
 # --------------------------
 STATIC_URL = "/static/"
-STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")  # Collected by collectstatic
+STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # --------------------------
 # MEDIA FILES (Optional)
 # --------------------------
 MEDIA_URL = "/media/"
-MEDIA_ROOT = os.path.join(BASE_DIR, "mediafiles")
+MEDIA_ROOT = BASE_DIR / "mediafiles"
 
 # --------------------------
 # REST FRAMEWORK
@@ -149,7 +154,7 @@ REST_FRAMEWORK = {
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "polls-cache"
+        "LOCATION": "polls-cache",
     }
 }
 
@@ -185,6 +190,6 @@ CELERY_ENABLED = env.bool("CELERY_ENABLED", default=False)
 if CELERY_ENABLED:
     CELERY_BROKER_URL = env("CELERY_BROKER_URL")
     CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND")
-    CELERY_ACCEPT_CONTENT = ['json']
-    CELERY_TASK_SERIALIZER = 'json'
-    CELERY_RESULT_SERIALIZER = 'json'
+    CELERY_ACCEPT_CONTENT = ["json"]
+    CELERY_TASK_SERIALIZER = "json"
+    CELERY_RESULT_SERIALIZER = "json"

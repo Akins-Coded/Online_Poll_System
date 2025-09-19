@@ -27,7 +27,7 @@ jobs:
 
     env:
       SECRET_KEY: ${{ secrets.SECRET_KEY }}
-      DEBUG: ${{ secrets.DEBUG }}
+      DEBUG: "False"
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
       DJANGO_SETTINGS_MODULE: online_poll_system.settings
       PYTHONUNBUFFERED: 1
