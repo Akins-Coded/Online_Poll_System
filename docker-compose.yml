@@ -1,27 +1,24 @@
-# No need for "version" in v2+
 services:
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000
-    volumes:
-      - .:/app  # for development; remove in production for a clean image
+    command: python manage.py runserver 0.0.0.0:8000  # Replace with gunicorn later if needed
     env_file:
-      - .env
+      - .env.prod  # Use a production .env file
     ports:
       - "8000:8000"
     depends_on:
       - db
+    restart: always
 
   db:
     image: postgres:15
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: polls_db
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-polls_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: always
 
 volumes:
   postgres_data:

@@ -15,26 +15,37 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ENVIRONMENT VARIABLES
 # --------------------------
 env = environ.Env(
-    DEBUG=(bool, False)
+    DEBUG=(bool, False),
+    SECRET_KEY=(str, "fallback-secret-for-dev-only"),
 )
 
-# Load .env file
-environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
+# Load .env file if it exists
+env_file = os.path.join(BASE_DIR, ".env")
+if os.path.exists(env_file):
+    environ.Env.read_env(env_file)
 
 # --------------------------
 # SECURITY SETTINGS
 # --------------------------
 DEBUG = env("DEBUG", default=False)
 SECRET_KEY = env("SECRET_KEY")
-
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 
 # --------------------------
 # DATABASE
 # --------------------------
-DATABASES = {
-    'default': env.db(default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
-}
+try:
+    DATABASES = {
+        "default": env.db()
+    }
+except Exception:
+    # Fallback to SQLite if DATABASE_URL is missing or invalid
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 # --------------------------
 # APPLICATION DEFINITION
@@ -75,7 +86,7 @@ ROOT_URLCONF = 'online_poll_system.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],  # Add custom template dirs if needed
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -93,18 +104,10 @@ WSGI_APPLICATION = 'online_poll_system.wsgi.application'
 # PASSWORD VALIDATION
 # --------------------------
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
 # --------------------------
@@ -120,8 +123,6 @@ USE_TZ = True
 # --------------------------
 STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")  # Collected by collectstatic
-
-# Whitenoise for serving static files in production
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # --------------------------
@@ -166,8 +167,9 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=False)
 X_FRAME_OPTIONS = "DENY"
 
-
-# Email
+# --------------------------
+# EMAIL CONFIGURATION
+# --------------------------
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
 EMAIL_HOST = env("EMAIL_HOST", default="smtp.gmail.com")
 EMAIL_PORT = env.int("EMAIL_PORT", default=587)
@@ -175,7 +177,9 @@ EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 
-# Celery
+# --------------------------
+# CELERY CONFIGURATION (optional)
+# --------------------------
 CELERY_ENABLED = env.bool("CELERY_ENABLED", default=True)
 if CELERY_ENABLED:
     CELERY_BROKER_URL = env("CELERY_BROKER_URL")
