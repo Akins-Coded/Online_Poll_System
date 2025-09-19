@@ -5,6 +5,8 @@ Django settings for online_poll_system project (Production Ready)
 import os
 from pathlib import Path
 import environ
+import secrets
+
 
 # --------------------------
 # BASE DIRECTORY
