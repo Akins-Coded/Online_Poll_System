@@ -38,17 +38,25 @@ ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["CodedMan.pythonanywhere.com"
 # --------------------------
 # DATABASE
 # --------------------------
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": env("DB_NAME", default=""),
-        "USER": env("DB_USER", default=""),
-        "PASSWORD": env("DB_PASSWORD", default=""),
-        "HOST": env("DB_HOST", default="127.0.0.1"),
-        "PORT": env("DB_PORT", default="3306"),
-        "OPTIONS": {"init_command": "SET sql_mode='STRICT_TRANS_TABLES'"},
+if os.environ.get("CI"):  # detect if running in CI
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",  # in-memory DB, recreated fresh for each run
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": env("DB_NAME", default=""),
+            "USER": env("DB_USER", default=""),
+            "PASSWORD": env("DB_PASSWORD", default=""),
+            "HOST": env("DB_HOST", default="127.0.0.1"),
+            "PORT": env("DB_PORT", default="3306"),
+            "OPTIONS": {"init_command": "SET sql_mode='STRICT_TRANS_TABLES'"},
+        }
+    }
 
 
 # --------------------------
