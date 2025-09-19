@@ -21,6 +21,13 @@ RUN apt-get update && apt-get install -y \
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+
+# Set default environment variables
+# --------------------------
+ENV DEBUG=False
+ENV SECRET_KEY=fallback-secret-for-dev-only
+ENV DATABASE_URL=sqlite:///:memory:
+
 # --------------------------
 # Copy & install Python dependencies
 # --------------------------
@@ -31,28 +38,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy project files
 # --------------------------
 COPY . .
-
+# Collect static safely
 # --------------------------
-# Default environment variables to prevent missing .env issues
-# Can be overridden by real .env or docker-compose env_file
-# --------------------------
-ENV DEBUG=False
-ENV SECRET_KEY=fallback-secret-for-dev-only
-ENV DATABASE_URL=sqlite:///:memory:
-
-# --------------------------
-# Collect static files safely
-# --------------------------
-RUN python -c "\
-import os; \
-os.environ.setdefault('SECRET_KEY', 'fallback-secret-for-dev-only'); \
-os.environ.setdefault('DEBUG', 'False'); \
-try: \
-    from django.core.management import execute_from_command_line; \
-    execute_from_command_line(['manage.py', 'collectstatic', '--noinput']); \
-except Exception as e: \
-    print('Warning: collectstatic skipped', e)\
-"
+RUN python manage.py collectstatic --noinput || echo "Warning: collectstatic skipped"
 
 # --------------------------
 # Expose port

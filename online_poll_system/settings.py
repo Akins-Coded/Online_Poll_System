@@ -3,9 +3,9 @@ Django settings for online_poll_system project (Production Ready)
 """
 
 import os
-from pathlib import Path
 import secrets
 import environ
+from pathlib import Path
 
 # --------------------------
 # BASE DIRECTORY
@@ -20,9 +20,9 @@ env = environ.Env(
 )
 
 # Load .env file if it exists
-env_file = BASE_DIR / ".env"
-if env_file.exists():
-    environ.Env.read_env(str(env_file))
+env_file = os.path.join(BASE_DIR, ".env")
+if os.path.exists(env_file):
+    environ.Env.read_env(env_file)
 
 # --------------------------
 # SECURITY SETTINGS
@@ -30,10 +30,9 @@ if env_file.exists():
 DEBUG = env("DEBUG", default=False)
 
 # SECRET_KEY fallback: .env → env vars → random secret (for CI/Docker)
-SECRET_KEY = env(
-    "SECRET_KEY",
-    default=os.getenv("SECRET_KEY") or secrets.token_urlsafe(50)
-)
+
+SECRET_KEY = os.environ.get("SECRET_KEY") or env.str("SECRET_KEY", default=secrets.token_urlsafe(50))
+
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 
