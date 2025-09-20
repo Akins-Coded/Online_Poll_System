@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
-from .views import RegisterView, LoginView, RefreshView, UserViewSet, UserListView
+from .views import RegisterView, LoginView, RefreshView, UserViewSet, UserListView, LogoutView
 
 # --- Swagger Schema View ---
 schema_view = get_schema_view(
@@ -27,6 +27,7 @@ router.register("users", UserViewSet, basename="user")
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="auth_register"),
     path("login/", LoginView.as_view(), name="auth_login"),
+    path("logout/", LogoutView.as_view(), name="auth_logout"), 
     path("refresh/", RefreshView.as_view(), name="auth_refresh"),
     path("users/", UserListView.as_view(), name="user_list"),
 

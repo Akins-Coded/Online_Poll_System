@@ -7,7 +7,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from .tasks import send_welcome_email
 from django.contrib.auth import get_user_model
-from .serializers import RegisterSerializer, AdminCreateSerializer, UserSerializer
+from .serializers import RegisterSerializer, AdminCreateSerializer, UserSerializer, LogoutSerializer
 from .permissions import IsAdminUser
 
 User = get_user_model()
@@ -105,3 +105,31 @@ class UserViewSet(viewsets.GenericViewSet):
             },
             status=status.HTTP_201_CREATED,
         )
+
+class LogoutView(generics.GenericAPIView):
+    """Logout by blacklisting the refresh token."""
+    serializer_class = LogoutSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Logout a user by blacklisting their refresh token",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=["refresh"],
+            properties={
+                "refresh": openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description="The refresh token to be blacklisted"
+                ),
+            },
+        ),
+        responses={
+            205: openapi.Response(description="Successfully logged out."),
+            400: openapi.Response(description="Invalid or already blacklisted token."),
+        },
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"detail": "Successfully logged out."}, status=status.HTTP_205_RESET_CONTENT)
