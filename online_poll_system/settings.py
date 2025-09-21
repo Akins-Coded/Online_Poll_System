@@ -77,6 +77,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "drf_yasg",
     "pytest_django",
+    "corsheaders",
 
     # Local apps
     "api.apps.ApiConfig",
@@ -191,4 +192,8 @@ EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 
 
-
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",   # React frontend
+    "http://127.0.0.1:8000",   # Django local
+    "https://codedman.pythonanywhere.com",  # Production domain
+]
