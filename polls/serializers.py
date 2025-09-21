@@ -21,7 +21,7 @@ class OptionSerializer(serializers.ModelSerializer):
 
 
 class OptionTextSerializer(serializers.Serializer):
-    """Used for poll creation: accepts objects like {"text": "Option A"}."""
+    """Used for poll creation: accepts {"text": "Option A"}."""
     text = serializers.CharField(max_length=255)
 
 
@@ -65,31 +65,36 @@ class PollSerializer(serializers.ModelSerializer):
 class CreatePollSerializer(serializers.ModelSerializer):
     """
     Creates a poll and multiple options in one request.
-    Input format:
-    {
-        "title": "Best language?",
-        "description": "Vote your favorite",
-        "expires_at": "2025-12-31T23:59:59Z",
-        "options": [{"text": "Python"}, {"text": "JavaScript"}]
-    }
+    Options can be:
+        ["Rice", "Beans"]
+        or
+        [{"text": "Rice"}, {"text": "Beans"}]
     """
-    options = OptionTextSerializer(many=True, write_only=True, required=True)
+    options = serializers.ListField(child=serializers.JSONField(), write_only=True, required=True)
 
     class Meta:
         model = Poll
         fields = ["title", "description", "expires_at", "options"]
 
+    def validate_options(self, value):
+        # Normalize to [{"text": "..."}]
+        normalized = []
+        for item in value:
+            if isinstance(item, str):
+                normalized.append({"text": item})
+            elif isinstance(item, dict) and "text" in item:
+                normalized.append(item)
+            else:
+                raise serializers.ValidationError(
+                    "Each option must be a string or an object with a 'text' field."
+                )
+        return normalized
+
     def create(self, validated_data):
         options_data = validated_data.pop("options", [])
-        request = self.context.get("request", None)
-        created_by = getattr(request, "user", None)
-
-        # Create poll
-        poll = Poll.objects.create(created_by=created_by, **validated_data)
-
-        # Bulk create options
+        request = self.context["request"]
+        poll = Poll.objects.create(created_by=request.user, **validated_data)
         Option.objects.bulk_create([Option(poll=poll, text=o["text"]) for o in options_data])
-
         return poll
 
 
@@ -99,17 +104,19 @@ class CreatePollSerializer(serializers.ModelSerializer):
 class VoteSerializer(serializers.ModelSerializer):
     """
     Accepts {"option_id": <id>} to cast a vote.
-    Validates option existence, poll expiry, and duplicate votes.
+    Validates option existence & poll expiry.
     Handles race conditions via IntegrityError.
+    Returns option details + timestamp for clients.
     """
     option_id = serializers.IntegerField(write_only=True)
+    option = OptionSerializer(read_only=True)
+    timestamp = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = Vote
-        fields = ["option_id"]
+        fields = ["option_id", "option", "timestamp"]
 
     def validate(self, attrs):
-        user = self.context["request"].user
         option_id = attrs.get("option_id")
 
         try:
@@ -120,12 +127,8 @@ class VoteSerializer(serializers.ModelSerializer):
         poll = option.poll
 
         # Expiration check
-        if poll.expires_at is not None and timezone.now() >= poll.expires_at:
+        if poll.expires_at and timezone.now() >= poll.expires_at:
             raise serializers.ValidationError({"poll": "Poll has expired."})
-
-        # Duplicate check
-        if Vote.objects.filter(user=user, poll=poll).exists():
-            raise serializers.ValidationError({"poll": "User has already voted in this poll."})
 
         attrs["option"] = option
         attrs["poll"] = poll
