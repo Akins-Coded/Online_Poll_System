@@ -63,7 +63,7 @@ class CreatePollSerializer(serializers.ModelSerializer):
             created_by=self.context["request"].user, **validated_data
         )
         Option.objects.bulk_create([
-            Option(poll=poll, text=opt) for opt in options_data
+            Option(poll=poll, text=opt["text"]) for opt in options_data
         ])
         return poll
 
