@@ -41,24 +41,26 @@ class PollViewSet(viewsets.ModelViewSet):
             return AddOptionSerializer
         return PollSerializer
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request
+        return context
+
     # -------------------------------
     # Permissions per action
     # -------------------------------
     def get_permissions(self):
         if self.action in ["list", "retrieve", "results"]:
             return [permissions.AllowAny()]
-        if self.action in ["vote"]:
+        if self.action == "vote":
             return [permissions.IsAuthenticated()]
-        return super().get_permissions()
+        return [IsAdminOrReadOnly()]
 
     # -------------------------------
     # Querysets
     # -------------------------------
     def get_queryset(self):
-        """
-        For `list` → return only active polls (non-expired).
-        For others → allow all polls.
-        """
+        """For `list` → return only active polls (non-expired)."""
         qs = super().get_queryset()
         if self.action == "list":
             return qs.filter(expires_at__gt=timezone.now()).order_by("-created_at")
@@ -73,22 +75,16 @@ class PollViewSet(viewsets.ModelViewSet):
         poll = self.get_object()
 
         if poll.expires_at and poll.expires_at <= timezone.now():
-            return Response(
-                {"error": "This poll has expired."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"error": "This poll has expired."}, status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = VoteSerializer(data=request.data, context={"request": request})
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(poll=poll)
+        serializer.save()  # No need to pass poll, serializer handles it
 
         # Invalidate results cache
         cache.delete(f"poll_results:{poll.id}")
 
-        return Response(
-            {"message": "Vote recorded successfully."},
-            status=status.HTTP_201_CREATED,
-        )
+        return Response({"message": "Vote recorded successfully."}, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"], permission_classes=[IsAdminOrReadOnly])
     def options(self, request, pk=None):
@@ -96,14 +92,11 @@ class PollViewSet(viewsets.ModelViewSet):
         poll = self.get_object()
 
         if poll.expires_at and poll.expires_at <= timezone.now():
-            return Response(
-                {"error": "This poll has expired, cannot add options."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"error": "This poll has expired, cannot add options."}, status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = AddOptionSerializer(data=request.data)
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(poll=poll)
+        serializer.save(poll=poll)  # Needed here
 
         # Invalidate results cache
         cache.delete(f"poll_results:{poll.id}")
@@ -118,10 +111,7 @@ class PollViewSet(viewsets.ModelViewSet):
 
         if not data:
             poll = self.get_object()
-
-            # Annotate options with vote counts
             options = poll.options.annotate(votes_count=Count("votes"))
-
             poll_data = PollSerializer(poll).data
             total_votes = sum(opt.votes_count for opt in options)
 

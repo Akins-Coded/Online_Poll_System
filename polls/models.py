@@ -1,22 +1,25 @@
 from django.conf import settings
 from django.core.cache import cache
 from django.db import models
-from datetime import datetime, timedelta
+from django.utils import timezone
+from datetime import timedelta
 
 
 def default_created_at():
-    return datetime.utcnow()
+    return timezone.now()
 
 
 class Poll(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="polls")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="polls"
+    )
     created_at = models.DateTimeField(default=default_created_at)
     expires_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        ordering = ["-created_at"] 
+        ordering = ["-created_at"]
 
     def save(self, *args, **kwargs):
         if not self.expires_at:
@@ -26,7 +29,7 @@ class Poll(models.Model):
         super().save(*args, **kwargs)
 
     def is_active(self):
-        return datetime.utcnow() < self.expires_at
+        return timezone.now() < self.expires_at
 
     def __str__(self):
         return self.title
@@ -36,12 +39,19 @@ class Option(models.Model):
     poll = models.ForeignKey(Poll, on_delete=models.CASCADE, related_name="options")
     text = models.CharField(max_length=255)
 
+    @property
+    def votes_count(self):
+        """Returns number of votes for this option."""
+        return self.votes.count()
+
     def __str__(self):
         return f"{self.poll.title} — {self.text}"
 
 
 class Vote(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="votes")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="votes"
+    )
     poll = models.ForeignKey("Poll", on_delete=models.CASCADE, related_name="votes")
     option = models.ForeignKey("Option", on_delete=models.CASCADE, related_name="votes")
     timestamp = models.DateTimeField(auto_now_add=True)
@@ -83,4 +93,3 @@ class Vote(models.Model):
         cache.delete(f"poll_results:{self.poll_id}")
 
         super().delete(*args, **kwargs)
-        
