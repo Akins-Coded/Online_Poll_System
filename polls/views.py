@@ -1,11 +1,11 @@
 from django.utils import timezone
-from django.db.models import Count
+from django.db.models import Count, Prefetch
 from django.core.cache import cache
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import Poll, Option, Vote
+from .models import Poll, Option
 from .serializers import (
     PollSerializer,
     CreatePollSerializer,
@@ -16,7 +16,6 @@ from .permissions import IsAdminOrReadOnly
 
 
 class PollViewSet(viewsets.ModelViewSet):
-
     queryset = Poll.objects.all().select_related("created_by").prefetch_related("options")
     permission_classes = [IsAdminOrReadOnly]
 
@@ -54,21 +53,16 @@ class PollViewSet(viewsets.ModelViewSet):
         """
         - For list → return only active polls.
         - Always annotate votes_count for each option.
+        - Also annotate poll with total_votes.
         """
-        qs = super().get_queryset()
-
-        # Prefetch options with votes_count annotated
-        qs = qs.prefetch_related(
-            models.Prefetch(
-                "options",
-                queryset=Option.objects.annotate(votes_count=Count("votes")),
-            )
-        )
+    
+        qs = Poll.objects.select_related("created_by").prefetch_related(
+            Prefetch("options", queryset=Option.objects.annotate(votes_count=Count("votes")))
+        ).annotate(total_votes=Count("votes"))
 
         if self.action == "list":
-            return qs.filter(expires_at__gt=timezone.now()).order_by("-created_at")
-
-        return qs
+            qs = qs.filter(expires_at__gt=timezone.now())
+        return qs.order_by("-created_at")
 
     # -------------------------------
     # Actions
@@ -109,20 +103,16 @@ class PollViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["get"], permission_classes=[permissions.AllowAny])
     def results(self, request, pk=None):
-        """Return poll results with caching (1 minute)."""
         cache_key = f"poll_results:{pk}"
-        data = cache.get(cache_key)
 
-        if not data:
+        def fetch():
             poll = self.get_object()
             poll_data = PollSerializer(poll).data
-            total_votes = sum(opt["votes_count"] for opt in poll_data["options"])
-
-            data = {
+            return {
                 "poll": poll_data,
-                "total_votes": total_votes,
+                "total_votes": poll.total_votes,
                 "options": poll_data["options"],
             }
-            cache.set(cache_key, data, timeout=60)
 
+        data = cache.get_or_set(cache_key, fetch, timeout=60)
         return Response(data)

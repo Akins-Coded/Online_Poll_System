@@ -12,12 +12,16 @@ User = get_user_model()
 # Option Serializers
 # -----------------------------
 class OptionSerializer(serializers.ModelSerializer):
-    """Read-only option serializer with vote count."""
-    votes_count = serializers.IntegerField(read_only=True)
+    """Read-only option serializer with vote count (safe fallback)."""
+    votes_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Option
         fields = ["id", "text", "votes_count"]
+
+    def get_votes_count(self, obj):
+        # Use annotated value if available, else fallback to .count()
+        return getattr(obj, "votes_count", obj.votes.count())
 
 
 class OptionTextSerializer(serializers.Serializer):
@@ -45,9 +49,10 @@ class AddOptionSerializer(serializers.ModelSerializer):
 # Poll Serializers
 # -----------------------------
 class PollSerializer(serializers.ModelSerializer):
-    """Read serializer: includes options + creator info."""
+    """Read serializer: includes options + creator info + total votes."""
     options = OptionSerializer(many=True, read_only=True)
     created_by = serializers.StringRelatedField(read_only=True)
+    total_votes = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Poll
@@ -58,6 +63,7 @@ class PollSerializer(serializers.ModelSerializer):
             "created_by",
             "created_at",
             "expires_at",
+            "total_votes",
             "options",
         ]
 
@@ -76,24 +82,24 @@ class CreatePollSerializer(serializers.ModelSerializer):
         model = Poll
         fields = ["title", "description", "expires_at", "options"]
 
-    def validate_options(self, value):
-        # Normalize to [{"text": "..."}]
+    def to_internal_value(self, data):
+        options = data.get("options", [])
         normalized = []
-        for item in value:
+        for item in options:
             if isinstance(item, str):
                 normalized.append({"text": item})
             elif isinstance(item, dict) and "text" in item:
                 normalized.append(item)
             else:
                 raise serializers.ValidationError(
-                    "Each option must be a string or an object with a 'text' field."
+                    {"options": "Each option must be a string or an object with a 'text' field."}
                 )
-        return normalized
+        data["options"] = normalized
+        return super().to_internal_value(data)
 
     def create(self, validated_data):
         options_data = validated_data.pop("options", [])
-        request = self.context["request"]
-        poll = Poll.objects.create(created_by=request.user, **validated_data)
+        poll = Poll.objects.create(created_by=self.context["request"].user, **validated_data)
         Option.objects.bulk_create([Option(poll=poll, text=o["text"]) for o in options_data])
         return poll
 
@@ -124,7 +130,12 @@ class VoteSerializer(serializers.ModelSerializer):
         except Option.DoesNotExist:
             raise serializers.ValidationError({"option_id": "Option not found."})
 
-        poll = option.poll
+        if option.poll.expires_at and timezone.now() >= option.poll.expires_at:
+            raise serializers.ValidationError({"poll": "Poll has expired."})
+
+        attrs["option"] = option
+        attrs["poll"] = option.poll
+        return attrs
 
         # Expiration check
         if poll.expires_at and timezone.now() >= poll.expires_at:
@@ -136,12 +147,10 @@ class VoteSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = self.context["request"].user
-        option = validated_data.pop("option")
-        poll = validated_data.pop("poll")
-
         try:
-            vote = Vote.objects.create(user=user, poll=poll, option=option)
+            return Vote.objects.create(user=user, **validated_data)
         except IntegrityError:
             raise serializers.ValidationError({"poll": "User has already voted in this poll."})
 
-        return vote
+    def update(self, instance, validated_data):
+        raise serializers.ValidationError("Votes cannot be updated, only deleted/re-cast.")

@@ -39,11 +39,7 @@ class Option(models.Model):
     poll = models.ForeignKey(Poll, on_delete=models.CASCADE, related_name="options")
     text = models.CharField(max_length=255)
 
-    @property
-    def votes_count(self):
-        """Returns number of votes for this option."""
-        return self.votes.count()
-
+    
     def __str__(self):
         return f"{self.poll.title} — {self.text}"
 
