@@ -60,10 +60,23 @@ class PollViewSet(viewsets.ModelViewSet):
     # Querysets
     # -------------------------------
     def get_queryset(self):
-        """For `list` → return only active polls (non-expired)."""
+        """
+        - For list → return only active polls.
+        - Always annotate votes_count for each option.
+        """
         qs = super().get_queryset()
+
+        # Prefetch options with votes_count annotated
+        qs = qs.prefetch_related(
+            models.Prefetch(
+                "options",
+                queryset=Option.objects.annotate(votes_count=Count("votes")),
+            )
+        )
+
         if self.action == "list":
             return qs.filter(expires_at__gt=timezone.now()).order_by("-created_at")
+
         return qs
 
     # -------------------------------
@@ -79,7 +92,7 @@ class PollViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()  # No need to pass poll, serializer handles it
+        serializer.save()
 
         # Invalidate results cache
         cache.delete(f"poll_results:{poll.id}")
@@ -96,7 +109,7 @@ class PollViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(poll=poll)  # Needed here
+        serializer.save(poll=poll)
 
         # Invalidate results cache
         cache.delete(f"poll_results:{poll.id}")
@@ -111,18 +124,14 @@ class PollViewSet(viewsets.ModelViewSet):
 
         if not data:
             poll = self.get_object()
-            options = poll.options.annotate(votes_count=Count("votes"))
             poll_data = PollSerializer(poll).data
-            total_votes = sum(opt.votes_count for opt in options)
+            total_votes = sum(opt["votes_count"] for opt in poll_data["options"])
 
             data = {
                 "poll": poll_data,
                 "total_votes": total_votes,
-                "options": [
-                    {"id": opt.id, "text": opt.text, "votes_count": opt.votes_count}
-                    for opt in options
-                ],
+                "options": poll_data["options"],
             }
-            cache.set(cache_key, data, timeout=60)  # Cache for 1 minute
+            cache.set(cache_key, data, timeout=60)
 
         return Response(data)
