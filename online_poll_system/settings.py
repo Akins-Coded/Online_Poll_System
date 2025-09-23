@@ -34,18 +34,24 @@ if not SECRET_KEY:
         
 
 ALLOWED_HOSTS = ['codedman.pythonanywhere.com', 'www.codedman.pythonanywhere.com', '127.0.0.1', 'localhost']
-
 # --------------------------
-# DATABASE
+# DATABASES
 # --------------------------
-if os.environ.get("CI"):  # detect if running in CI
+if os.environ.get("CI"):  # CI environment (GitHub Actions, etc.)
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": ":memory:",  # in-memory DB, recreated fresh for each run
+            "NAME": ":memory:",  # fresh DB each run
         }
     }
-else:
+elif os.environ.get("DJANGO_ENV") == "development":  # local development
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",  # file-based SQLite DB
+        }
+    }
+else:  # production (MySQL)
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.mysql",
@@ -54,10 +60,11 @@ else:
             "PASSWORD": env("DB_PASSWORD", default=""),
             "HOST": env("DB_HOST", default="127.0.0.1"),
             "PORT": env("DB_PORT", default="3306"),
-            "OPTIONS": {"init_command": "SET sql_mode='STRICT_TRANS_TABLES'"},
+            "OPTIONS": {
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+            },
         }
     }
-
 
 # --------------------------
 # APPLICATION DEFINITION
