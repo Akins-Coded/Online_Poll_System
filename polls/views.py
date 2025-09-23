@@ -16,15 +16,6 @@ from .permissions import IsAdminOrReadOnly
 
 
 class PollViewSet(viewsets.ModelViewSet):
-    """
-    Poll API:
-    - GET    /polls/              → List available polls (non-expired)
-    - POST   /polls/              → Create poll (admin only)
-    - GET    /polls/{id}/         → Retrieve poll
-    - POST   /polls/{id}/vote/    → Vote on a poll (authenticated)
-    - POST   /polls/{id}/options/ → Add option to poll (admin only, before expiry)
-    - GET    /polls/{id}/results/ → Poll results (cached 1 min)
-    """
 
     queryset = Poll.objects.all().select_related("created_by").prefetch_related("options")
     permission_classes = [IsAdminOrReadOnly]
