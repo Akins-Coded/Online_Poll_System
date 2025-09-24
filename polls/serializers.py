@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 
 from .models import Poll, Option, Vote
 
@@ -108,12 +108,6 @@ class CreatePollSerializer(serializers.ModelSerializer):
 # Vote Serializer
 # -----------------------------
 class VoteSerializer(serializers.ModelSerializer):
-    """
-    Accepts {"option_id": <id>} to cast a vote.
-    Validates option existence & poll expiry.
-    Handles race conditions via IntegrityError.
-    Returns option details + timestamp for clients.
-    """
     option_id = serializers.IntegerField(write_only=True)
     option = OptionSerializer(read_only=True)
     timestamp = serializers.DateTimeField(read_only=True)
@@ -137,20 +131,15 @@ class VoteSerializer(serializers.ModelSerializer):
         attrs["poll"] = option.poll
         return attrs
 
-        # Expiration check
-        if poll.expires_at and timezone.now() >= poll.expires_at:
-            raise serializers.ValidationError({"poll": "Poll has expired."})
-
-        attrs["option"] = option
-        attrs["poll"] = poll
-        return attrs
-
     def create(self, validated_data):
         user = self.context["request"].user
         try:
-            return Vote.objects.create(user=user, **validated_data)
+            with transaction.atomic():
+                return Vote.objects.create(user=user, **validated_data)
         except IntegrityError:
-            raise serializers.ValidationError({"poll": "User has already voted in this poll."})
+            raise serializers.ValidationError(
+                {"poll": "User has already voted in this poll."}
+            )
 
     def update(self, instance, validated_data):
         raise serializers.ValidationError("Votes cannot be updated, only deleted/re-cast.")
