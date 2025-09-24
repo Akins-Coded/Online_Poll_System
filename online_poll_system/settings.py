@@ -210,3 +210,5 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8000",   # Django local
     "https://codedman.pythonanywhere.com",  # Production domain
 ]
+
+SWAGGER_USE_COMPAT_RENDERERS = False
