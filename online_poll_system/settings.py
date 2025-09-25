@@ -5,7 +5,7 @@ import os
 import logging
 from pathlib import Path
 import environ
-from django.utils.timezone import timedelta  
+from datetime import timedelta  
 from django.core.exceptions import ImproperlyConfigured
 
 logger = logging.getLogger(__name__)
@@ -213,7 +213,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),   # default is 5 minutes
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=2),   # default is 5 minutes
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),      # default is 1 day
 }
 
