@@ -3,6 +3,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.permissions import IsAuthenticated
+from django.db.models import Count
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
@@ -95,7 +96,30 @@ class UserViewSet(viewsets.GenericViewSet):
             },
             status=status.HTTP_201_CREATED,
         )
-
+     # ✅ Count users by role (admin-only)
+    @swagger_auto_schema(
+        operation_description="Get user counts by role (admin-only). Returns a JSON object with role counts.",
+        responses={200: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            additional_properties=openapi.Schema(type=openapi.TYPE_INTEGER),
+            example={"admin": 3, "voter": 42},
+        )},
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        permission_classes=[permissions.IsAuthenticated, IsAdminUser],
+        url_path="role-counts",
+    )
+    def role_counts(self, request):
+        """Return a dictionary of user counts by role."""
+        role_data = (
+            User.objects.values("role")
+            .annotate(count=Count("role"))
+            .order_by()
+        )
+        response_data = {item["role"]: item["count"] for item in role_data}
+        return Response(response_data, status=status.HTTP_200_OK)
 
 class LogoutView(generics.GenericAPIView):
     """Logout by blacklisting the refresh token."""
