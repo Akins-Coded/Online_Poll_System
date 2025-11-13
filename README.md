@@ -113,3 +113,25 @@ POST /api/register/
     "password": "MySecret123",
     "confirm_password": "MySecret123"
 }
+
+
+---
+
+# 📄 License
+
+CODED-SOMETHING
+
+---
+
+## 📬 Contact
+
+**Akindipe Muheez Omogbolahan**  
+📧 Email: [akindipemuheez@outlook.com](mailto:akindipemuheez@outlook.com)  
+🌐 [Linktree](https://linktr.ee/akinscoded)  
+🔗 [LinkedIn](https://www.linkedin.com/in/akinscoded)  
+💻 [GitHub](https://github.com/Akins-Coded)
+🌐 [Website](https://akinscoded.kit.com/394ddc1ee4)
+
+---
+
+_This project is Built with precision, security, I.A.M. and scalability in mind._
