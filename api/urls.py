@@ -6,6 +6,7 @@ from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from .views import (
     RegisterView,
+    AdminCreateView,
     UserViewSet,
     UserListView,
     LogoutView,
@@ -39,6 +40,7 @@ urlpatterns = [
     path("logout/", LogoutView.as_view(), name="auth_logout"),
     path("users/", UserListView.as_view(), name="user_list"),
     path("me/", me, name="auth_me"),
+    path("create_admin/", AdminCreateView.as_view(), name="create_admin"),
 
     # Swagger endpoints
     re_path(r"^docs(?P<format>\.json|\.yaml)$", schema_view.without_ui(cache_timeout=0), name="schema-json"),

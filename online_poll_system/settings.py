@@ -36,29 +36,35 @@ if not SECRET_KEY:
 
 ALLOWED_HOSTS = ['codedman.pythonanywhere.com', 'www.codedman.pythonanywhere.com', 'vote-poll.netlify.app', 'www.vote-poll.netlify.app', '127.0.0.1', 'localhost']
 # --------------------------
-# DATABASES
+# DATABASES CONFIGURATION
 # --------------------------
-if os.environ.get("CI"):  # CI environment (GitHub Actions, etc.)
+
+# CI environment → always use fresh in-memory SQLite
+if os.environ.get("CI"):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": ":memory:",  # fresh DB each run
+            "NAME": ":memory:",   # fresh DB for each CI run
         }
     }
-elif os.environ.get("DJANGO_ENV") == "development":  # local development
+
+# Local development → file-based SQLite
+elif os.environ.get("DJANGO_ENV") == "development":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",  # file-based SQLite DB
+            "NAME": BASE_DIR / "db.sqlite3",
         }
     }
-else:  # production (MySQL)
+
+# Production → MySQL
+else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.mysql",
-            "NAME": env("DB_NAME", default=""),
-            "USER": env("DB_USER", default=""),
-            "PASSWORD": env("DB_PASSWORD", default=""),
+            "NAME": env("DB_NAME"),
+            "USER": env("DB_USER"),
+            "PASSWORD": env("DB_PASSWORD"),
             "HOST": env("DB_HOST", default="127.0.0.1"),
             "PORT": env("DB_PORT", default="3306"),
             "OPTIONS": {
@@ -66,7 +72,6 @@ else:  # production (MySQL)
             },
         }
     }
-
 # --------------------------
 # APPLICATION DEFINITION
 # --------------------------

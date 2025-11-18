@@ -56,6 +56,9 @@ class RegisterView(generics.CreateAPIView):
         user = serializer.save()
         send_welcome_email(user.email, user.first_name)
 
+class AdminCreateView(generics.CreateAPIView):
+    serializer_class = AdminCreateSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdminUser]
 
 class RefreshView(TokenRefreshView):
     """JWT token refresh view."""
