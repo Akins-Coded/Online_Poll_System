@@ -5,6 +5,7 @@ import os
 import logging
 from pathlib import Path
 import environ
+import dj_database_url
 from datetime import timedelta  
 from django.core.exceptions import ImproperlyConfigured
 
@@ -57,21 +58,16 @@ elif os.environ.get("DJANGO_ENV") == "development":
         }
     }
 
-# Production → MySQL
+# Production → PostgreSQL on Render
 else:
     DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.mysql",
-            "NAME": env("DB_NAME"),
-            "USER": env("DB_USER"),
-            "PASSWORD": env("DB_PASSWORD"),
-            "HOST": env("DB_HOST", default="127.0.0.1"),
-            "PORT": env("DB_PORT", default="3306"),
-            "OPTIONS": {
-                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
-            },
-        }
+        "default": dj_database_url.config(
+            default=env("DATABASE_URL"),
+            conn_max_age=600,
+            ssl_require=True,
+        )
     }
+    
 # --------------------------
 # APPLICATION DEFINITION
 # --------------------------
