@@ -209,7 +209,7 @@ EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",   # React frontend local
     "http://127.0.0.1:8000",   # Django local
-    "https://codedman.pythonanywhere.com",  # Production domain
+    "https://vote-online.onrender.com",  # Production domain
     "https://vote-poll.netlify.app",  # frontend domain
 ]
 
