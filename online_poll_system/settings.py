@@ -147,8 +147,16 @@ USE_TZ = True
 # --------------------------
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+
+# Only include STATICFILES_DIRS if the directory exists
+static_dir = os.path.join(BASE_DIR, 'static')
+if os.path.exists(static_dir):
+    STATICFILES_DIRS = [static_dir]
+else:
+    STATICFILES_DIRS = []
+
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
 # --------------------------
 # MEDIA FILES (Optional)
 # --------------------------
@@ -205,15 +213,19 @@ EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 
-
+# --------------------------
+# CORS CONFIGURATION
+# --------------------------
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",   # React frontend local
     "http://127.0.0.1:8000",   # Django local
-    "https://vote-online.onrender.com",  # Production domain
-    "vote-online.onrender.com",
-    "https://vote-poll.netlify.app",  # frontend domain
+    "https://vote-online.onrender.com",  # Production domain (FIXED - added https://)
+    "https://vote-poll.netlify.app",  # Frontend domain
 ]
 
+# --------------------------
+# JWT CONFIGURATION
+# --------------------------
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=2),   # default is 5 minutes
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),      # default is 1 day
