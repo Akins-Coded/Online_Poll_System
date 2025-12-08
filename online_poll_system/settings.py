@@ -210,7 +210,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",   # React frontend local
     "http://127.0.0.1:8000",   # Django local
     "https://vote-online.onrender.com",  # Production domain
-    "vote-online.onrender.com"
+    "vote-online.onrender.com",
     "https://vote-poll.netlify.app",  # frontend domain
 ]
 
