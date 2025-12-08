@@ -35,7 +35,7 @@ if not SECRET_KEY:
         raise ImproperlyConfigured("SECRET_KEY must be set in production.")
         
 
-ALLOWED_HOSTS = ['codedman.pythonanywhere.com', 'www.codedman.pythonanywhere.com', 'vote-poll.netlify.app', 'www.vote-poll.netlify.app', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['codedman.pythonanywhere.com', 'vote-online.onrender.com', 'https://vote-online.onrender.com', 'www.codedman.pythonanywhere.com', 'vote-poll.netlify.app', 'www.vote-poll.netlify.app', '127.0.0.1', 'localhost']
 # --------------------------
 # DATABASES CONFIGURATION
 # --------------------------
