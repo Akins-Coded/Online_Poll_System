@@ -67,7 +67,7 @@ class RefreshView(TokenRefreshView):
 
 class UserListView(generics.ListAPIView):
     """List all users — only admins can access this."""
-    queryset = User.objects.all()
+    queryset = User.objects.all().order_by('role', "email") 
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated, IsAdminUser]
 

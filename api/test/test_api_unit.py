@@ -88,7 +88,7 @@ def test_register_email_mismatch(api_client):
 # --- Login View Tests ---
 @pytest.mark.django_db
 def test_login_user(api_client, voter_user):
-    url = reverse("auth_login")
+    url = reverse("token_obtain_pair")
     payload = {"email": "voter@example.com", "password": "StrongPass123"}
     response = api_client.post(url, payload, format="json")
     assert response.status_code == status.HTTP_200_OK
